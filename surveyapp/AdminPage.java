@@ -32,7 +32,9 @@ public class AdminPage {
         JButton btnDeleteResponse = new JButton("Delete Response");
         JButton btnSyncOffline = new JButton("Sync Offline Responses");
         JButton btnBack = new JButton("Back");
+        JButton btnReports = new JButton("View Reports"); // create the button
 
+        // Top panel
         JPanel topPanel = new JPanel();
         topPanel.add(btnCreateSurvey);
         topPanel.add(btnEditSurvey);
@@ -40,7 +42,9 @@ public class AdminPage {
         topPanel.add(btnDeleteResponse);
         topPanel.add(btnSyncOffline);
         topPanel.add(btnBack);
+        topPanel.add(btnReports); // add Reports button AFTER topPanel is created
 
+        // Add components to main panel
         panel.add(lbl, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
         panel.add(topPanel, BorderLayout.SOUTH);
@@ -49,7 +53,6 @@ public class AdminPage {
         btnCreateSurvey.addActionListener(e -> openSurveyCreationDialog(panel));
         btnEditSurvey.addActionListener(e -> editSurveyDialog(panel));
         btnRefresh.addActionListener(e -> refreshTable(tableModel));
-
         btnDeleteResponse.addActionListener(e -> {
             int row = responseTable.getSelectedRow();
             if(row>=0){
@@ -73,6 +76,14 @@ public class AdminPage {
         btnBack.addActionListener(e -> {
             frame.getContentPane().removeAll();
             frame.add(homePanel);
+            frame.revalidate();
+            frame.repaint();
+        });
+
+        btnReports.addActionListener(e -> {
+            ReportPage reportPage = new ReportPage(frame, homePanel);
+            frame.getContentPane().removeAll();
+            frame.add(reportPage.getPanel());
             frame.revalidate();
             frame.repaint();
         });
