@@ -1,6 +1,9 @@
 package surveyapp;
 
 import java.io.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 
 public class OfflineQueue {
@@ -56,13 +59,53 @@ public class OfflineQueue {
         }
     }
 
-    // Sync offline responses to MainApp.responses
+    // Sync offline responses to the database
     public static void syncResponses(){
         Map<String, Map<String, List<String>>> offlineMap = loadQueue();
-        for(Map.Entry<String, Map<String, List<String>>> entry : offlineMap.entrySet()){
-            MainApp.responses.put(entry.getKey(), entry.getValue());
+        if(offlineMap.isEmpty()) return;
+
+        try(Connection conn = DBConnection.getConnection()){
+            for(Map.Entry<String, Map<String, List<String>>> userEntry : offlineMap.entrySet()){
+                String userName = userEntry.getKey();
+
+                for(Map.Entry<String, List<String>> ansEntry : userEntry.getValue().entrySet()){
+                    String questionText = ansEntry.getKey();
+                    List<String> answers = ansEntry.getValue();
+
+                    // Find survey_id and question_id
+                    int surveyId = 0;
+                    int questionId = 0;
+
+                    String query = "SELECT s.id as survey_id, q.id as question_id " +
+                            "FROM surveys s JOIN questions q ON s.id = q.survey_id " +
+                            "WHERE q.text=?";
+                    try(PreparedStatement pst = conn.prepareStatement(query)){
+                        pst.setString(1, questionText);
+                        try(ResultSet rs = pst.executeQuery()){
+                            if(rs.next()){
+                                surveyId = rs.getInt("survey_id");
+                                questionId = rs.getInt("question_id");
+                            }
+                        }
+                    }
+
+                    if(surveyId != 0 && questionId != 0){
+                        String insert = "INSERT INTO responses(user_name,survey_id,question_id,answer) VALUES (?,?,?,?)";
+                        try(PreparedStatement pst = conn.prepareStatement(insert)){
+                            pst.setString(1,userName);
+                            pst.setInt(2,surveyId);
+                            pst.setInt(3,questionId);
+                            pst.setString(4,String.join(",",answers));
+                            pst.executeUpdate();
+                        }
+                    }
+                }
+            }
+
+            // Clear offline file after sync
+            saveQueue(new LinkedHashMap<>());
+        } catch(Exception e){
+            e.printStackTrace();
         }
-        // Clear file after sync
-        saveQueue(new LinkedHashMap<>());
     }
 }
